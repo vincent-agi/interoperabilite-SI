@@ -21,7 +21,7 @@ import { CommandEntity } from '../commands/entities/command.entity';
       migrations: [__dirname + '/migrations/**/*.js'],
       logging: ["error", "schema", "warn"],
     }),
-    TypeOrmModule.forFeature([LogEntity]),
+    TypeOrmModule.forFeature([LogEntity, CommandEntity]),
   ],
   controllers: [LogsController],
   providers: [LogQueryService, DatabaseLoggerService],

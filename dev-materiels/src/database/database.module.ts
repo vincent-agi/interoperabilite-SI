@@ -21,7 +21,7 @@ import { OrderEntity } from '../orders/entities/order.entity';
       migrations: [__dirname + '/migrations/**/*.js'],
       logging: ["error", "schema", "warn"],
     }),
-    TypeOrmModule.forFeature([LogEntity]),
+    TypeOrmModule.forFeature([LogEntity, OrderEntity]),
   ],
   controllers: [LogsController],
   providers: [LogQueryService, DatabaseLoggerService],
