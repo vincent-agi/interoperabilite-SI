@@ -19,7 +19,7 @@ import { OrderEntity } from '../orders/entities/order.entity';
       synchronize: false,
       migrationsRun: true,
       migrations: [__dirname + '/migrations/**/*.js'],
-      logging: ["error", "schema", "warn"],
+      logging: true,
     }),
     TypeOrmModule.forFeature([LogEntity, OrderEntity]),
   ],

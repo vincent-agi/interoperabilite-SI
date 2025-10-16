@@ -19,7 +19,7 @@ import { CommandEntity } from '../commands/entities/command.entity';
       synchronize: false,
       migrationsRun: true,
       migrations: [__dirname + '/migrations/**/*.js'],
-      logging: ["error", "schema", "warn"],
+      logging: true,
     }),
     TypeOrmModule.forFeature([LogEntity, CommandEntity]),
   ],
