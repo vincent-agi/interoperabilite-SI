@@ -41,6 +41,7 @@ services:
       - "traefik.http.middlewares.wagon-lits-security.headers.customResponseHeaders.Content-Security-Policy=default-src 'self'; frame-ancestors 'none'"
       - "traefik.http.routers.wagon-lits.middlewares=wagon-lits-security@docker"
 
+  # Dev-materiels
   dev-materiels:
     build:
       context: ./dev-materiels
@@ -104,3 +105,39 @@ services:
       - "traefik.http.middlewares.dashboard-stripprefix.stripprefix.prefixes=/dashboard"
       - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_BASIC_AUTH:-admin:$2y$05$9.nBPbXVyyHM4UfL/8GegOXzpVeyOTfNXYX2MwgVZ8jmw8QO3ri66}"
       - "traefik.http.middlewares.compress.compress=true"
+  
+  db:
+    image: postgres:16
+    container_name: database-si
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=siinteroperable
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d siinteroperable"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: db-administration
+    restart: unless-stopped
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:-admin}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      db:
+        condition: service_healthy
