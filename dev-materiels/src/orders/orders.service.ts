@@ -4,14 +4,15 @@ import { HttpService } from '@nestjs/axios';
 import { CustomLoggerService } from '../logger/custom-logger.service';
 import { firstValueFrom } from 'rxjs';
 import { AxiosResponse } from 'axios';
+import { OrderRepository } from './order.repository';
+import { OrderEntity } from './entities/order.entity';
 
 @Injectable()
 export class OrdersService {
-  private orders = [];
-
   constructor(
     private readonly httpService: HttpService,
     private readonly logger: CustomLoggerService,
+    private readonly orderRepository: OrderRepository,
   ) {
     this.logger.setContext('OrdersService');
   }
@@ -29,7 +30,7 @@ export class OrdersService {
    * @param orderData 
    * @returns Order processing
    */
-  processOrder(orderData: any) {
+  async processOrder(orderData: any) {
     const confirmationId = this.generateConfirmationId();
     const now = new Date();
     
@@ -38,18 +39,19 @@ export class OrdersService {
     const estimatedDelivery = new Date(now);
     estimatedDelivery.setDate(estimatedDelivery.getDate() + estimatedProcessingDays);
     
-    const processedOrder = {
-      ...orderData,
-      received: now,
-      confirmationId,
-      status: 'PROCESSING',
-      estimatedDelivery,
-      processingNotes: `Commande de ${orderData.materials.length} articles en traitement`,
-    };
+    // Créer l'entité d'ordre pour la persistance
+    const orderEntity = new OrderEntity();
+    orderEntity.orderNumber = orderData.orderNumber;
+    orderEntity.date = orderData.date;
+    orderEntity.department = orderData.department;
+    orderEntity.priority = orderData.priority;
+    orderEntity.materials = orderData.materials;
+    orderEntity.status = 'PROCESSING';
     
-    this.orders.push(processedOrder);
+    // Persister l'ordre dans la base de données
+    const savedOrder = await this.orderRepository.save(orderEntity);
     
-    this.logger.log(`Commande ${orderData.orderNumber} reçue et traitée avec ID de confirmation ${confirmationId}`);
+    await this.logger.log(`Commande ${orderData.orderNumber} reçue et traitée avec ID de confirmation ${confirmationId}`);
     
     return {
       confirmationId,
@@ -64,15 +66,18 @@ export class OrdersService {
   // Envoyer des mises à jour sur les commandes toutes les 30 secondes (simulation)
   @Cron('*/30 * * * * *')
   async sendOrderUpdates() {
-    // Ne rien faire si aucune commande n'est enregistrée
-    if (this.orders.length === 0) {
-      return;
-    }
-
     try {
+      // Récupérer les commandes en traitement
+      const orders = await this.orderRepository.findAll({ status: 'PROCESSING', limit: 10 });
+      
+      // Ne rien faire si aucune commande n'est enregistrée
+      if (orders.length === 0) {
+        return;
+      }
+
       // Sélectionner une commande aléatoire pour mise à jour
-      const orderIndex = Math.floor(Math.random() * this.orders.length);
-      const order = this.orders[orderIndex];
+      const orderIndex = Math.floor(Math.random() * orders.length);
+      const order = orders[orderIndex];
       
       // Générer une mise à jour aléatoire
       const updates = [
@@ -86,20 +91,20 @@ export class OrdersService {
       const updateIndex = Math.floor(Math.random() * updates.length);
       const updateMessage = updates[updateIndex];
       
-      // Mettre à jour le statut si c'est "Expédié"
-      if (updateIndex === updates.length - 1) {
-        order.status = 'SHIPPED';
-      }
+      // Créer un nouveau statut si c'est "Expédié"
+      const newStatus = updateIndex === updates.length - 1 ? 'SHIPPED' : 'PROCESSING';
+      
+      // Mettre à jour le statut dans la base de données
+      const updatedOrder = await this.orderRepository.updateStatus(order.orderNumber, newStatus);
       
       const update = {
-        confirmationId: order.confirmationId,
         orderNumber: order.orderNumber,
         timestamp: new Date(),
-        status: order.status,
+        status: newStatus,
         updateMessage,
       };
 
-      this.logger.log(`Envoi de mise à jour pour la commande ${order.orderNumber}: ${updateMessage}`);
+      await this.logger.log(`Envoi de mise à jour pour la commande ${order.orderNumber}: ${updateMessage}`);
       
       // Envoyer la mise à jour via l'API gateway
       try {
@@ -107,18 +112,16 @@ export class OrdersService {
           this.httpService.post<any>('http://api-gateway/wagon-list/commands', update)
         ) as AxiosResponse<any>;
         
-        this.logger.log(`Réponse de wagon-lits pour la mise à jour: ${JSON.stringify(response.data)}`);
+        await this.logger.log(`Réponse de wagon-lits pour la mise à jour: ${JSON.stringify(response.data)}`);
         
-        // Si la commande est expédiée, la retirer de la liste active
-        if (order.status === 'SHIPPED') {
-          this.orders.splice(orderIndex, 1);
-          this.logger.log(`Commande ${order.orderNumber} retirée de la liste des commandes actives après expédition`);
+        if (newStatus === 'SHIPPED') {
+          await this.logger.log(`Commande ${order.orderNumber} marquée comme expédiée`);
         }
       } catch (error) {
-        this.logger.error(`Erreur lors de l'envoi de la mise à jour: ${error.message}`, error.stack);
+        await this.logger.error(`Erreur lors de l'envoi de la mise à jour: ${error.message}`, error.stack);
       }
     } catch (error) {
-      this.logger.error(`Erreur lors de la génération de la mise à jour: ${error.message}`, error.stack);
+      await this.logger.error(`Erreur lors de la génération de la mise à jour: ${error.message}`, error.stack);
     }
   }
 }

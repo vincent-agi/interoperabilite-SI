@@ -13,17 +13,48 @@ export class CommandsController {
 
   @Get('trigger')
   async triggerOrder() {
-    this.logger.log('Déclenchement manuel d\'une commande');
+    await this.logger.log('Déclenchement manuel d\'une commande');
     return await this.commandsService.sendMaterialOrder();
   }
 
   @Post()
-  receiveCommand(@Body() commandData: any) {
-    this.logger.log(`Commande reçue: ${JSON.stringify(commandData)}`);
-    return { 
-      received: true,
-      timestamp: new Date(),
-      message: 'Commande reçue par le service Wagon-Lits'
-    };
+  async receiveCommand(@Body() updateData: any) {
+    await this.logger.log(`Mise à jour reçue: ${JSON.stringify(updateData)}`);
+    
+    try {
+      // Si c'est une mise à jour d'une commande existante
+      if (updateData.orderNumber) {
+        const command = await this.commandsService.processUpdate(updateData);
+        
+        if (command) {
+          return { 
+            received: true,
+            timestamp: new Date(),
+            message: `Mise à jour de la commande ${updateData.orderNumber} traitée avec succès`,
+            status: command.status
+          };
+        } else {
+          return { 
+            received: false,
+            timestamp: new Date(),
+            message: `Commande ${updateData.orderNumber} non trouvée`
+          };
+        }
+      } else {
+        return { 
+          received: true,
+          timestamp: new Date(),
+          message: 'Données reçues par le service Wagon-Lits mais aucune action effectuée (orderNumber manquant)'
+        };
+      }
+    } catch (error) {
+      await this.logger.error(`Erreur lors du traitement de la mise à jour: ${error.message}`, error.stack);
+      return {
+        received: true,
+        timestamp: new Date(),
+        error: error.message,
+        message: 'Erreur lors du traitement de la mise à jour'
+      };
+    }
   }
 }

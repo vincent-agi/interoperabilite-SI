@@ -34,9 +34,17 @@ docker-compose up -d
 
 ## Logs
 
+### Fichiers de logs
 Les logs de chaque service sont enregistrés dans leurs dossiers respectifs sous `/logs` :
 - `/wagon-lits/logs/wagon-lits-YYYY-MM-DD.log`
 - `/dev-materiels/logs/dev-materiels-YYYY-MM-DD.log`
+
+### Base de données
+Les logs sont également enregistrés dans une base de données PostgreSQL pour faciliter les recherches et analyses :
+- **Interface pgAdmin** : accessible via http://localhost:5050 (admin@admin.com / admin)
+- **Tables de logs** : 
+  - `wagon_lits_logs` - Logs du service Wagon-Lits
+  - `dev_materiels_logs` - Logs du service Dev-Materiels
 
 ## Contexte
 

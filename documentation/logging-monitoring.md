@@ -6,15 +6,23 @@ Ce document détaille le système de journalisation (logging) et de surveillance
 
 ### Vue d'Ensemble
 
-Chaque service dispose d'un système de journalisation autonome qui enregistre toutes les opérations importantes. Ce système est basé sur la bibliothèque Winston, un logger polyvalent et performant pour Node.js.
+Chaque service dispose d'un système de journalisation autonome qui enregistre toutes les opérations importantes. Ce système est basé sur la bibliothèque Winston pour la journalisation dans des fichiers et PostgreSQL pour le stockage structuré des logs dans une base de données.
 
 ### Architecture de Logging
 
-Le système de journalisation est structuré autour d'un service personnalisé (`CustomLoggerService`) qui :
-1. Crée et gère les fichiers de logs
-2. Formate les entrées de journal
-3. Gère différents niveaux de gravité
-4. Segmente les logs par contexte
+Le système de journalisation est structuré autour de deux services principaux :
+
+1. **CustomLoggerService** :
+   - Crée et gère les fichiers de logs
+   - Formate les entrées de journal
+   - Gère différents niveaux de gravité
+   - Segmente les logs par contexte
+   - Coordonne l'enregistrement dans les fichiers et la base de données
+
+2. **DatabaseLoggerService** :
+   - Stocke les logs dans une base de données PostgreSQL
+   - Permet des requêtes structurées sur les logs
+   - Facilite l'analyse et la visualisation des données de log
 
 ### Niveaux de Log
 
@@ -41,6 +49,8 @@ Par exemple :
 
 ### Stockage et Rotation des Logs
 
+#### Stockage dans des Fichiers
+
 Les logs sont stockés dans des fichiers avec rotation quotidienne :
 
 - **Service Wagon-Lits** : `/logs/wagon-lits-YYYY-MM-DD.log`
@@ -50,6 +60,29 @@ La rotation des logs permet de :
 - Limiter la taille des fichiers
 - Faciliter l'archivage
 - Optimiser les performances
+
+#### Stockage dans la Base de Données
+
+En parallèle, les logs sont enregistrés dans une base de données PostgreSQL avec la structure suivante :
+
+**Tables :**
+- `wagon_lits_logs` - Logs du service Wagon-Lits
+- `dev_materiels_logs` - Logs du service Dev-Materiels
+
+**Structure des tables :**
+- `id` : Identifiant unique (UUID)
+- `timestamp` : Date et heure de l'événement
+- `level` : Niveau de gravité (error, warn, info, debug, verbose)
+- `context` : Contexte de l'événement (nom du service/module)
+- `message` : Description de l'événement
+- `trace` : Stack trace en cas d'erreur (optionnel)
+- `metadata` : Données supplémentaires au format JSON (optionnel)
+- `service` : Nom du service source (wagon-lits ou dev-materiels)
+
+Cette double approche de stockage offre :
+- Persistance robuste des logs
+- Capacités de recherche et filtrage avancées
+- Possibilité d'analyse statistique des événements
 
 ### Événements Journalisés
 
@@ -128,6 +161,35 @@ Pour accéder aux logs des services :
    docker exec -it wagon-lits-connector cat /app/logs/wagon-lits-2025-10-16.log
    docker exec -it dev-materiels-connector cat /app/logs/dev-materiels-2025-10-16.log
    ```
+
+3. **Logs de la base de données** :
+   - Accès via pgAdmin : http://localhost:5050
+     - Email: admin@admin.com
+     - Mot de passe: admin
+   - Connexion à la base de données :
+     - Host: db
+     - Port: 5432
+     - Database: siinteroperable
+     - Username: postgres
+     - Password: postgres
+   
+   - Requêtes SQL utiles :
+     ```sql
+     -- Tous les logs d'erreur
+     SELECT * FROM wagon_lits_logs WHERE level = 'error' ORDER BY timestamp DESC;
+     
+     -- Logs des dernières 24 heures
+     SELECT * FROM dev_materiels_logs 
+     WHERE timestamp > NOW() - INTERVAL '24 hours' 
+     ORDER BY timestamp DESC;
+     
+     -- Groupement des erreurs par contexte
+     SELECT context, COUNT(*) as error_count 
+     FROM wagon_lits_logs 
+     WHERE level = 'error' 
+     GROUP BY context 
+     ORDER BY error_count DESC;
+     ```
 
 ## Pour aller plus loin
 

@@ -18,10 +18,16 @@ services:
     container_name: wagon-lits-connector
     volumes:
       - ./wagon-lits-logs:/app/logs
+      - ./wagon-lits/src:/app/src
     expose:
       - "3030:3000"
+    command: >
+      sh -c "npm run migration:run && npm run start:prod"
     depends_on:
-      - api-gateway
+      db:
+        condition: service_healthy
+      api-gateway:
+        condition: service_started
     restart: unless-stopped
 
     networks:
@@ -51,8 +57,14 @@ services:
       - "3040:3000"
     volumes:
       - ./dev-materiels-logs:/app/logs
+      - ./dev-materiels/src:/app/src
+    command: >
+      sh -c "npm run migration:run && npm run start:prod"
     depends_on:
-      - api-gateway
+      db:
+        condition: service_healthy
+      api-gateway:
+        condition: service_started
     restart: unless-stopped
 
     networks:
@@ -118,6 +130,9 @@ services:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
+    networks:
+      - wagon-lits-network
+      - dev-materiels-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d siinteroperable"]
       interval: 10s
@@ -138,6 +153,13 @@ services:
       - "5050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - wagon-lits-network
+      - dev-materiels-network
     depends_on:
       db:
         condition: service_healthy
+
+volumes:
+  db_data:
+  pgadmin_data:

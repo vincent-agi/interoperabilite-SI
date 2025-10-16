@@ -12,14 +12,14 @@ export class OrdersController {
   }
 
   @Post()
-  receiveOrder(@Body() orderData: any) {
-    this.logger.log(`Commande reçue de wagon-lits: ${JSON.stringify(orderData)}`);
+  async receiveOrder(@Body() orderData: any) {
+    await this.logger.log(`Commande reçue de wagon-lits: ${JSON.stringify(orderData)}`);
     return this.ordersService.processOrder(orderData);
   }
 
   @Get('status')
-  getStatus() {
-    this.logger.log('Requête sur le statut du service');
+  async getStatus() {
+    await this.logger.log('Requête sur le statut du service');
     return { 
       status: 'active',
       timestamp: new Date(),

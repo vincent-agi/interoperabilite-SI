@@ -6,12 +6,13 @@ COPY package*.json ./
 
 RUN npm install -g @nestjs/cli && npm install
 
-# Création du dossier pour les logs
 RUN mkdir -p logs
 
 COPY . .
 
 RUN npm run build
+
+RUN cp -r src/database/migrations dist/database/
 
 EXPOSE 3000
 
