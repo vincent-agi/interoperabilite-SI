@@ -1,0 +1,106 @@
+networks:
+  api-gateway-public:
+    driver: bridge
+    name: api-gateway-public
+  wagon-lits-network:
+    driver: bridge
+    name: wagon-lits-network
+  dev-materiels-network:
+    driver: bridge
+    name: dev-materiels-network
+
+services:
+  # Wagon lits
+  wagon-lits:
+    build:
+      context: ./wagon-lits
+      dockerfile: wagon-lits.Dockerfile
+    container_name: wagon-lits-connector
+    volumes:
+      - ./wagon-lits-logs:/app/logs
+    expose:
+      - "3030:3000"
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+
+    networks:
+      - wagon-lits-network
+      - api-gateway-public
+    # Configuration API gateway wagon lits (Traefik)
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wagon-lits.rule=PathPrefix(`/wagon-list`)"
+      - "traefik.http.routers.wagon-lits.entrypoints=web"
+      - "traefik.http.routers.wagon-lits.priority=10"
+      - "traefik.http.services.wagon-lits.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.wagon-lits-security.headers.customResponseHeaders.X-Frame-Options=DENY"
+      - "traefik.http.middlewares.wagon-lits-security.headers.customResponseHeaders.X-Content-Type-Options=nosniff"
+      - "traefik.http.middlewares.wagon-lits-security.headers.customResponseHeaders.X-XSS-Protection=1; mode=block"
+      - "traefik.http.middlewares.wagon-lits-security.headers.customResponseHeaders.Referrer-Policy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.wagon-lits-security.headers.customResponseHeaders.Content-Security-Policy=default-src 'self'; frame-ancestors 'none'"
+      - "traefik.http.routers.wagon-lits.middlewares=wagon-lits-security@docker"
+
+  dev-materiels:
+    build:
+      context: ./dev-materiels
+      dockerfile: dev-materiels.Dockerfile
+    container_name: dev-materiels-connector
+    expose:
+      - "3040:3000"
+    volumes:
+      - ./dev-materiels-logs:/app/logs
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+
+    networks:
+      - dev-materiels-network
+      - api-gateway-public
+    # Configuration API gateway dev-materiels (Traefik)
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dev-materiels.rule=PathPrefix(`/dev-materiels`)"
+      - "traefik.http.routers.dev-materiels.entrypoints=web"
+      - "traefik.http.routers.dev-materiels.priority=10"
+      - "traefik.http.services.dev-materiels.loadbalancer.server.port=3000"
+      - "traefik.http.middlewares.dev-materiels-security.headers.customResponseHeaders.X-Frame-Options=DENY"
+      - "traefik.http.middlewares.dev-materiels-security.headers.customResponseHeaders.X-Content-Type-Options=nosniff"
+      - "traefik.http.middlewares.dev-materiels-security.headers.customResponseHeaders.X-XSS-Protection=1; mode=block"
+      - "traefik.http.middlewares.dev-materiels-security.headers.customResponseHeaders.Referrer-Policy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.dev-materiels-security.headers.customResponseHeaders.Content-Security-Policy=default-src 'self'; frame-ancestors 'none'"
+      - "traefik.http.routers.dev-materiels.middlewares=dev-materiels-security@docker"
+
+  api-gateway:
+    image: traefik:v2.10
+    container_name: api-gateway
+    command:
+      - "--log.level=DEBUG"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=api-gateway-public"
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro 
+      - ./traefik/letsencrypt:/letsencrypt
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+    restart: unless-stopped
+    networks:
+      - api-gateway-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=PathPrefix(`/dashboard`) || PathPrefix(`/api/dashboard`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.entrypoints=web"
+      - "traefik.http.routers.dashboard.middlewares=auth,dashboard-stripprefix"
+      - "traefik.http.middlewares.dashboard-stripprefix.stripprefix.prefixes=/dashboard"
+      - "traefik.http.middlewares.auth.basicauth.users=${TRAEFIK_BASIC_AUTH:-admin:$2y$05$9.nBPbXVyyHM4UfL/8GegOXzpVeyOTfNXYX2MwgVZ8jmw8QO3ri66}"
+      - "traefik.http.middlewares.compress.compress=true"

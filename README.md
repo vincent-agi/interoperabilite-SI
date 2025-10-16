@@ -1,3 +1,4 @@
+````markdown
 # interoperabilite-SI
 
 ## Quick start
@@ -17,6 +18,18 @@ cd interoperabilite-SI
 ```bash
 docker-compose up -d
 ```
+
+## Fonctionnement du projet
+
+- Le service **Wagon-Lits** envoie automatiquement des commandes de matériel toutes les 30 secondes au service Dev-Materiels via l'API Gateway.
+- Le service **Dev-Materiels** traite ces commandes et envoie des mises à jour toutes les 30 secondes sur l'état d'avancement de ces commandes.
+- L'**API Gateway** (Traefik) gère le routage entre les services et assure la sécurité via des headers HTTP.
+
+## Logs
+
+Les logs de chaque service sont enregistrés dans leurs dossiers respectifs sous `/logs` :
+- `/wagon-lits/logs/wagon-lits-YYYY-MM-DD.log`
+- `/dev-materiels/logs/dev-materiels-YYYY-MM-DD.log`
 
 ## Contexte
 
