@@ -1,4 +1,3 @@
-````markdown
 # interoperabilite-SI
 
 ## Prérequis
