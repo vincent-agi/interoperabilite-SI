@@ -15,5 +15,6 @@ import { CommandRepository } from './command.repository';
   ],
   providers: [CommandsService, CommandRepository],
   controllers: [CommandsController],
+  exports: [CommandRepository],
 })
 export class CommandsModule {}
