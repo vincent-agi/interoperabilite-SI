@@ -5,7 +5,6 @@ import { HttpModule } from '@nestjs/axios';
 import { LoggerModule } from '../logger/logger.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrderEntity } from './entities/order.entity';
-import { OrderRepository } from './order.repository';
 
 @Module({
   imports: [
@@ -13,8 +12,8 @@ import { OrderRepository } from './order.repository';
     LoggerModule,
     TypeOrmModule.forFeature([OrderEntity])
   ],
-  providers: [OrdersService, OrderRepository],
+  providers: [OrdersService],
   controllers: [OrdersController],
-  exports: [OrderRepository],
+  exports: [TypeOrmModule]
 })
 export class OrdersModule {}

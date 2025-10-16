@@ -5,7 +5,6 @@ import { CommandsService } from './commands.service';
 import { CommandsController } from './commands.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CommandEntity } from './entities/command.entity';
-import { CommandRepository } from './command.repository';
 
 @Module({
   imports: [
@@ -13,8 +12,8 @@ import { CommandRepository } from './command.repository';
     LoggerModule,
     TypeOrmModule.forFeature([CommandEntity])
   ],
-  providers: [CommandsService, CommandRepository],
+  providers: [CommandsService],
   controllers: [CommandsController],
-  exports: [CommandRepository],
+  exports: [TypeOrmModule]
 })
 export class CommandsModule {}

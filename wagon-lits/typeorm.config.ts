@@ -12,6 +12,7 @@ const dataSource = new DataSource({
   entities: [LogEntity, CommandEntity],
   migrations: ['src/database/migrations/**/*.ts'],
   synchronize: false,
+  logging: true, // Activer le logging pour le débogage
 });
 
 export default dataSource;

@@ -14,7 +14,7 @@ export class OrdersController {
   @Post()
   async receiveOrder(@Body() orderData: any) {
     await this.logger.log(`Commande reçue de wagon-lits: ${JSON.stringify(orderData)}`);
-    return this.ordersService.processOrder(orderData);
+    return await this.ordersService.processOrder(orderData);
   }
 
   @Get('status')

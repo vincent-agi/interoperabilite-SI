@@ -4,7 +4,8 @@ import { HttpService } from '@nestjs/axios';
 import { CustomLoggerService } from '../logger/custom-logger.service';
 import { firstValueFrom } from 'rxjs';
 import { AxiosResponse } from 'axios';
-import { CommandRepository } from './command.repository';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CommandEntity } from './entities/command.entity';
 
 @Injectable()
@@ -12,7 +13,8 @@ export class CommandsService {
   constructor(
     private readonly httpService: HttpService,
     private readonly logger: CustomLoggerService,
-    private readonly commandRepository: CommandRepository,
+    @InjectRepository(CommandEntity)
+    private commandRepository: Repository<CommandEntity>,
   ) {
     this.logger.setContext('CommandsService');
   }
@@ -51,21 +53,37 @@ export class CommandsService {
   async processUpdate(updateData: any) {
     try {
       // Vérifier si la commande existe
-      const existingCommand = await this.commandRepository.findByOrderNumber(updateData.orderNumber);
+      const existingCommand = await this.commandRepository.findOne({ where: { orderNumber: updateData.orderNumber } });
       
       if (!existingCommand) {
         await this.logger.warn(`Tentative de mise à jour d'une commande inexistante: ${updateData.orderNumber}`);
         return null;
       }
 
-      // Mettre à jour le statut
-      const updatedCommand = await this.commandRepository.updateStatus(
-        updateData.orderNumber,
-        updateData.status || existingCommand.status,
-        updateData.updateMessage || `Mise à jour reçue: ${updateData.status || 'Statut inchangé'}`
-      );
+      const now = new Date();
+      const status = updateData.status || existingCommand.status;
+      const updateMessage = updateData.updateMessage || `Mise à jour reçue: ${updateData.status || 'Statut inchangé'}`;
       
-      await this.logger.log(`Commande ${updateData.orderNumber} mise à jour avec le statut: ${updateData.status || existingCommand.status}`);
+      // Initialiser le tableau des mises à jour si c'est la première
+      if (!existingCommand.updates) {
+        existingCommand.updates = [];
+      }
+      
+      // Ajouter la mise à jour au tableau
+      existingCommand.updates.push({
+        timestamp: now,
+        status,
+        message: updateMessage
+      });
+      
+      // Mettre à jour le statut et la date de dernière mise à jour
+      existingCommand.status = status;
+      existingCommand.lastUpdateAt = now;
+      
+      // Sauvegarder la commande mise à jour
+      const updatedCommand = await this.commandRepository.save(existingCommand);
+      
+      await this.logger.log(`Commande ${updateData.orderNumber} mise à jour avec le statut: ${status}`);
       
       return updatedCommand;
     } catch (error) {
@@ -105,8 +123,14 @@ export class CommandsService {
         message: 'Commande créée'
       }];
 
-      // Persister la commande en base de données
-      await this.commandRepository.save(commandEntity);
+      try {
+        // Persister la commande en base de données
+        await this.logger.log(`Tentative de sauvegarde de la commande: ${JSON.stringify(commandEntity)}`);
+        await this.commandRepository.save(commandEntity);
+        await this.logger.log(`Commande sauvegardée avec succès: ${orderNumber}`);
+      } catch (error) {
+        await this.logger.error(`Erreur lors de la sauvegarde de la commande: ${error.message}`, error.stack);
+      }
 
       await this.logger.log(`Envoi de la commande ${orderNumber} vers dev-materiels`);
       
@@ -119,17 +143,37 @@ export class CommandsService {
       
       // Mettre à jour la commande avec les informations de la réponse
       if (response.data && response.data.estimatedDelivery) {
-        await this.commandRepository.updateStatus(
-          orderNumber, 
-          'PROCESSING', 
-          `Commande envoyée. Livraison estimée: ${new Date(response.data.estimatedDelivery).toLocaleDateString()}`
-        );
-        
-        // Mettre à jour la date estimée de livraison
-        const commandToUpdate = await this.commandRepository.findByOrderNumber(orderNumber);
-        if (commandToUpdate) {
-          commandToUpdate.estimatedDelivery = new Date(response.data.estimatedDelivery);
-          await this.commandRepository.save(commandToUpdate);
+        try {
+          // Récupérer la commande
+          const commandToUpdate = await this.commandRepository.findOne({ where: { orderNumber } });
+          
+          if (commandToUpdate) {
+            // Mettre à jour le statut et les infos
+            const now = new Date();
+            const updateMessage = `Commande envoyée. Livraison estimée: ${new Date(response.data.estimatedDelivery).toLocaleDateString()}`;
+            
+            // Ajouter la mise à jour
+            if (!commandToUpdate.updates) {
+              commandToUpdate.updates = [];
+            }
+            
+            commandToUpdate.updates.push({
+              timestamp: now,
+              status: 'PROCESSING',
+              message: updateMessage
+            });
+            
+            // Mettre à jour les champs
+            commandToUpdate.status = 'PROCESSING';
+            commandToUpdate.lastUpdateAt = now;
+            commandToUpdate.estimatedDelivery = new Date(response.data.estimatedDelivery);
+            
+            // Sauvegarder
+            await this.commandRepository.save(commandToUpdate);
+            await this.logger.log(`Commande ${orderNumber} mise à jour avec la date de livraison estimée`);
+          }
+        } catch (error) {
+          await this.logger.error(`Erreur lors de la mise à jour avec la date de livraison: ${error.message}`, error.stack);
         }
       }
       
