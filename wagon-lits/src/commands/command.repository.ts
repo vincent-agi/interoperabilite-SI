@@ -1,17 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CommandEntity } from './entities/command.entity';
 
 @Injectable()
 export class CommandRepository {
+  private readonly logger = new Logger(CommandRepository.name);
+  
   constructor(
     @InjectRepository(CommandEntity)
     private commandRepository: Repository<CommandEntity>,
   ) {}
 
   async save(command: Partial<CommandEntity>): Promise<CommandEntity> {
-    return await this.commandRepository.save(command);
+    try {
+      this.logger.log(`Saving command: ${JSON.stringify(command)}`);
+      const result = await this.commandRepository.save(command);
+      this.logger.log(`Command saved successfully with ID: ${result.id}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`Failed to save command: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async findByOrderNumber(orderNumber: string): Promise<CommandEntity | null> {

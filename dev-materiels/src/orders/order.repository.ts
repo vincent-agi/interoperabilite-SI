@@ -1,17 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrderEntity } from './entities/order.entity';
 
 @Injectable()
 export class OrderRepository {
+  private readonly logger = new Logger(OrderRepository.name);
+  
   constructor(
     @InjectRepository(OrderEntity)
     private orderRepository: Repository<OrderEntity>,
   ) {}
 
   async save(order: Partial<OrderEntity>): Promise<OrderEntity> {
-    return await this.orderRepository.save(order);
+    try {
+      this.logger.log(`Saving order: ${JSON.stringify(order)}`);
+      const result = await this.orderRepository.save(order);
+      this.logger.log(`Order saved successfully with ID: ${result.id}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`Failed to save order: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async findByOrderNumber(orderNumber: string): Promise<OrderEntity | null> {
