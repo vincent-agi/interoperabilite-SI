@@ -1,6 +1,14 @@
 ````markdown
 # interoperabilite-SI
 
+## Prérequis
+
+Avoir docker Desktop installé sur votre machine (Mac/Windows)
+
+[Docker Desktop Mac](https://docs.docker.com/desktop/setup/install/mac-install/)
+
+[Docker Desktop Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
+
 ## Quick start
 
 1. Cloner le dépot
@@ -84,3 +92,6 @@ Maximiser l’interopérabilité, l’évolutivité et la pérennité de la solu
 
 ## Architecture finale
 <img width="2044" height="1788" alt="Mermaid Chart - Create complex, visual diagrams with text -2025-10-15-144217" src="https://github.com/user-attachments/assets/93817c53-8d26-465e-837d-549d4baa87e3" />
+
+
+[Documentations supplémentaires](./documentation/README.md)
