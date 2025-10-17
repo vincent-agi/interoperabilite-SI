@@ -14,8 +14,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  DEV_MATERIELS_IMAGE_NAME: ${{ github.repository }}-dev-materiels
-  WAGON_LITS_IMAGE_NAME: ${{ github.repository }}-wagon-lits
+  DEV_MATERIELS_IMAGE_NAME: ${{ format('{0}-dev-materiels', github.repository | lower) }}
+  WAGON_LITS_IMAGE_NAME: ${{ format('{0}-wagon-lits', github.repository | lower) }}
 
 jobs:
   build-and-push:
@@ -59,7 +59,9 @@ jobs:
           context: ./dev-materiels
           file: ./dev-materiels/dev-materiels.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.REGISTRY }}/${{ env.DEV_MATERIELS_IMAGE_NAME }}:latest,${{ env.REGISTRY }}/${{ env.DEV_MATERIELS_IMAGE_NAME }}:${{ github.sha }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.DEV_MATERIELS_IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.DEV_MATERIELS_IMAGE_NAME }}:${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -71,7 +73,9 @@ jobs:
           context: ./wagon-lits
           file: ./wagon-lits/wagon-lits.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ env.REGISTRY }}/${{ env.WAGON_LITS_IMAGE_NAME }}:latest,${{ env.REGISTRY }}/${{ env.WAGON_LITS_IMAGE_NAME }}:${{ github.sha }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.WAGON_LITS_IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.WAGON_LITS_IMAGE_NAME }}:${{ github.sha }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
