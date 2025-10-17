@@ -12,17 +12,11 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create(AppModule);
-  
-  // Get the custom logger from the app context
   const customLogger = app.get(CustomLoggerService);
   const nestLogger = app.get(NestLoggerAdapter);
-  
-  // Use the adapter for NestJS logger
   app.useLogger(nestLogger);
-  
   app.setGlobalPrefix('dev-materiels');
-  
-  await app.listen(3000);
+  await app.listen(3001);
   await customLogger.log(`Application is running on: ${await app.getUrl()}`, 'Bootstrap');
 }
 bootstrap();

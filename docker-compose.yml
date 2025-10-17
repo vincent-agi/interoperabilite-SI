@@ -20,7 +20,7 @@ services:
       - ./wagon-lits-logs:/app/logs
       - ./wagon-lits/src:/app/src
     expose:
-      - "3030:3000"
+      - "3030:3002"
     command: >
       sh -c "npm run migration:run && npm run start:prod"
     depends_on:
@@ -54,7 +54,7 @@ services:
       dockerfile: dev-materiels.Dockerfile
     container_name: dev-materiels-connector
     expose:
-      - "3040:3000"
+      - "3040:3001"
     volumes:
       - ./dev-materiels-logs:/app/logs
       - ./dev-materiels/src:/app/src

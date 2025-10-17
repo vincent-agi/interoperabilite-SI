@@ -26,6 +26,30 @@ cd interoperabilite-SI
 docker-compose up -d
 ```
 
+## Start local without docker
+
+```bash
+git clone https://github.com/vincent-agi/interoperabilite-SI.git
+```
+
+```bash
+cd interoperabilite-SI
+```
+
+```bash
+npn run install
+```
+
+```bash
+cd dev-materiels && npm start
+```
+
+Open new terminal and execute 
+
+```bash
+cd wagon-lits && npm start
+```
+
 ## Fonctionnement du projet
 
 - Le service **Wagon-Lits** envoie automatiquement des commandes de matériel toutes les 30 secondes au service Dev-Materiels via l'API Gateway.
