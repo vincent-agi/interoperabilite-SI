@@ -1,11 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { CustomLoggerService } from './custom-logger.service';
 import { DatabaseModule } from '../database/database.module';
 import { NestLoggerAdapter } from './nest-logger-adapter';
 
 @Module({
   imports: [
-    DatabaseModule
+    forwardRef(() => DatabaseModule)
   ],
   providers: [
     CustomLoggerService,

@@ -7,6 +7,7 @@ import { AxiosResponse } from 'axios';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CommandEntity } from './entities/command.entity';
+import { KafkaService } from '../kafka/kafka.service';
 
 @Injectable()
 export class CommandsService {
@@ -15,16 +16,15 @@ export class CommandsService {
     private readonly logger: CustomLoggerService,
     @InjectRepository(CommandEntity)
     private commandRepository: Repository<CommandEntity>,
+    private readonly kafkaService: KafkaService,
   ) {
     this.logger.setContext('CommandsService');
   }
 
-  // Générer un numéro de commande aléatoire
   generateOrderNumber(): string {
     return `WL-${Math.floor(Math.random() * 10000)}-${new Date().getTime().toString().slice(-4)}`;
   }
 
-  // Générer une liste de matériels aléatoire
   generateRandomMaterials(): any[] {
     const materials = [
       { name: 'Siège passager', quantity: Math.floor(Math.random() * 10) + 1 },
@@ -34,14 +34,13 @@ export class CommandsService {
       { name: 'Portes coulissantes', quantity: Math.floor(Math.random() * 8) + 1 },
     ];
 
-    // Sélectionner 1 à 3 matériels aléatoirement
     const selectedMaterials = [];
     const numMaterials = Math.floor(Math.random() * 3) + 1;
     
     for (let i = 0; i < numMaterials; i++) {
       const randomIndex = Math.floor(Math.random() * materials.length);
       selectedMaterials.push(materials[randomIndex]);
-      materials.splice(randomIndex, 1); // Éviter les doublons
+      materials.splice(randomIndex, 1);
       
       if (materials.length === 0) break;
     }
@@ -49,10 +48,8 @@ export class CommandsService {
     return selectedMaterials;
   }
 
-  // Traiter les mises à jour des commandes
   async processUpdate(updateData: any) {
     try {
-      // Vérifier si la commande existe
       const existingCommand = await this.commandRepository.findOne({ where: { orderNumber: updateData.orderNumber } });
       
       if (!existingCommand) {
@@ -64,23 +61,19 @@ export class CommandsService {
       const status = updateData.status || existingCommand.status;
       const updateMessage = updateData.updateMessage || `Mise à jour reçue: ${updateData.status || 'Statut inchangé'}`;
       
-      // Initialiser le tableau des mises à jour si c'est la première
       if (!existingCommand.updates) {
         existingCommand.updates = [];
       }
       
-      // Ajouter la mise à jour au tableau
       existingCommand.updates.push({
         timestamp: now,
         status,
         message: updateMessage
       });
       
-      // Mettre à jour le statut et la date de dernière mise à jour
       existingCommand.status = status;
       existingCommand.lastUpdateAt = now;
       
-      // Sauvegarder la commande mise à jour
       const updatedCommand = await this.commandRepository.save(existingCommand);
       
       await this.logger.log(`Commande ${updateData.orderNumber} mise à jour avec le statut: ${status}`);
@@ -92,7 +85,6 @@ export class CommandsService {
     }
   }
 
-  // Envoyer une commande de matériel toutes les 30 secondes
   @Cron('*/30 * * * * *')
   async sendMaterialOrder() {
     try {
@@ -100,7 +92,6 @@ export class CommandsService {
       const materials = this.generateRandomMaterials();
       const now = new Date();
 
-      // Créer l'objet de commande
       const order = {
         orderNumber,
         date: now,
@@ -109,7 +100,6 @@ export class CommandsService {
         materials,
       };
 
-      // Créer l'entité de commande pour la persistance
       const commandEntity = new CommandEntity();
       commandEntity.orderNumber = orderNumber;
       commandEntity.date = now;
@@ -124,7 +114,6 @@ export class CommandsService {
       }];
 
       try {
-        // Persister la commande en base de données
         await this.logger.log(`Tentative de sauvegarde de la commande: ${JSON.stringify(commandEntity)}`);
         await this.commandRepository.save(commandEntity);
         await this.logger.log(`Commande sauvegardée avec succès: ${orderNumber}`);
@@ -132,27 +121,25 @@ export class CommandsService {
         await this.logger.error(`Erreur lors de la sauvegarde de la commande: ${error.message}`, error.stack);
       }
 
-      await this.logger.log(`Envoi de la commande ${orderNumber} vers dev-materiels`);
+      await this.logger.log(`Envoi de la commande ${orderNumber} vers dev-materiels via Kafka`);
+
+      await this.kafkaService.sendMessage('orders', order);
+      await this.logger.log(`Commande ${orderNumber} envoyée via Kafka`);
       
-      // URL pour accéder au service dev-materiels via l'API gateway
       const response = await firstValueFrom(
         this.httpService.post<any>('http://api-gateway/dev-materiels/orders', order)
       ) as AxiosResponse<any>;
 
-      await this.logger.log(`Réponse reçue pour la commande ${orderNumber}: ${JSON.stringify(response.data)}`);
+      await this.logger.log(`Réponse HTTP reçue pour la commande ${orderNumber}: ${JSON.stringify(response.data)}`);
       
-      // Mettre à jour la commande avec les informations de la réponse
       if (response.data && response.data.estimatedDelivery) {
         try {
-          // Récupérer la commande
           const commandToUpdate = await this.commandRepository.findOne({ where: { orderNumber } });
           
           if (commandToUpdate) {
-            // Mettre à jour le statut et les infos
             const now = new Date();
             const updateMessage = `Commande envoyée. Livraison estimée: ${new Date(response.data.estimatedDelivery).toLocaleDateString()}`;
-            
-            // Ajouter la mise à jour
+
             if (!commandToUpdate.updates) {
               commandToUpdate.updates = [];
             }
@@ -163,12 +150,10 @@ export class CommandsService {
               message: updateMessage
             });
             
-            // Mettre à jour les champs
             commandToUpdate.status = 'PROCESSING';
             commandToUpdate.lastUpdateAt = now;
             commandToUpdate.estimatedDelivery = new Date(response.data.estimatedDelivery);
-            
-            // Sauvegarder
+
             await this.commandRepository.save(commandToUpdate);
             await this.logger.log(`Commande ${orderNumber} mise à jour avec la date de livraison estimée`);
           }

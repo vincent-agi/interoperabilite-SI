@@ -8,6 +8,9 @@ networks:
   dev-materiels-network:
     driver: bridge
     name: dev-materiels-network
+  kafka-network:
+    driver: bridge
+    name: kafka-network
 
 services:
   # Wagon lits
@@ -21,8 +24,6 @@ services:
       - ./wagon-lits/src:/app/src
     expose:
       - "3030:3002"
-    command: >
-      sh -c "npm run migration:run && npm run start:prod"
     depends_on:
       db:
         condition: service_healthy
@@ -33,6 +34,7 @@ services:
     networks:
       - wagon-lits-network
       - api-gateway-public
+      - kafka-network
     # Configuration API gateway wagon lits (Traefik)
     labels:
       - "traefik.enable=true"
@@ -58,8 +60,6 @@ services:
     volumes:
       - ./dev-materiels-logs:/app/logs
       - ./dev-materiels/src:/app/src
-    command: >
-      sh -c "npm run migration:run && npm run start:prod"
     depends_on:
       db:
         condition: service_healthy
@@ -70,6 +70,7 @@ services:
     networks:
       - dev-materiels-network
       - api-gateway-public
+      - kafka-network
     # Configuration API gateway dev-materiels (Traefik)
     labels:
       - "traefik.enable=true"
@@ -159,6 +160,63 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        
+  # Kafka & Zookeeper
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+    networks:
+      - kafka-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+        
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - kafka-network
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+      
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: interoperabilite-SI
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - kafka-network
 
 volumes:
   db_data:

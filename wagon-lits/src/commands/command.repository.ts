@@ -76,19 +76,16 @@ export class CommandRepository {
     
     const now = new Date();
     
-    // Initialiser le tableau des mises à jour si c'est la première
     if (!command.updates) {
       command.updates = [];
     }
     
-    // Ajouter la mise à jour au tableau
     command.updates.push({
       timestamp: now,
       status,
       message: updateMessage || `Mise à jour du statut: ${status}`
     });
     
-    // Mettre à jour le statut et la date de dernière mise à jour
     command.status = status;
     command.lastUpdateAt = now;
     

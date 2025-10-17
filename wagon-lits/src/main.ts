@@ -1,9 +1,11 @@
 import { NestFactory } from '@nestjs/core';
+import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AppModule } from './app.module';
 import { CustomLoggerService } from './logger/custom-logger.service';
 import { NestLoggerAdapter } from './logger/nest-logger-adapter';
+import { Partitioners } from 'kafkajs';
 
 async function bootstrap() {
   const logDir = path.join(process.cwd(), 'logs');
@@ -18,9 +20,28 @@ async function bootstrap() {
   
   app.useLogger(nestLogger);
   
+  app.connectMicroservice<MicroserviceOptions>({
+    transport: Transport.KAFKA,
+    options: {
+      client: {
+        clientId: 'wagon-lits-server',
+        brokers: ['kafka:9092'],
+      },
+      consumer: {
+        groupId: 'wagon-lits-consumer-server',
+      },
+      producer: {
+        createPartitioner: Partitioners.LegacyPartitioner
+      },
+    },
+  });
+  
+  await app.startAllMicroservices();
+  await customLogger.log('Microservice Kafka démarré', 'Bootstrap');
+  
   app.setGlobalPrefix('wagon-list');
   
   await app.listen(3002);
-  await customLogger.log(`Application is running on: ${await app.getUrl()}`, 'Bootstrap');
+  await customLogger.log(`Application HTTP est en cours d'exécution: ${await app.getUrl()}`, 'Bootstrap');
 }
 bootstrap();
