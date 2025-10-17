@@ -23,7 +23,7 @@ jobs:
         run: cd dev-materiels && npm i @nestjs/cli && npm i
 
       - name: Build Application
-        run: nest build
+        run: npx nest build
   
   build-wagon-lits:
     name: Build Applications
@@ -40,4 +40,4 @@ jobs:
         run: cd wagon-lits && npm i @nestjs/cli && npm i
 
       - name: Build Application
-        run: nest build
+        run: npx nest build
