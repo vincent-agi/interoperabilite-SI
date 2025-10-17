@@ -120,6 +120,11 @@ Maximiser l’interopérabilité, l’évolutivité et la pérennité de la solu
 
 ![WhatsApp Image 2025-10-15 at 17 04 53](https://github.com/user-attachments/assets/9e7b501b-307e-47fd-ada0-4316af122c83)
 
+## Architecture technique / WagonLits et DevMatériels
+<img width="1106" height="429" alt="Screenshot 2025-10-16 at 09 17 51" src="https://github.com/user-attachments/assets/b22ee4a3-a4f7-4230-a6d7-b4ebb7573b7e" />
+
+## Architecture technique / ConstructWagons et DevMatériels
+<img width="1106" height="429" alt="Screenshot 2025-10-16 at 09 17 51" src="https://github.com/user-attachments/assets/7cd67f43-c05c-46b5-ada9-f12812a468f1" />
 
 ## Architecture finale
 <img width="2044" height="1788" alt="Mermaid Chart - Create complex, visual diagrams with text -2025-10-15-144217" src="https://github.com/user-attachments/assets/93817c53-8d26-465e-837d-549d4baa87e3" />
