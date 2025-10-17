@@ -1,11 +1,10 @@
 name: Build and Push Docker Images
 
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**.md'
+  workflow_run:
+    workflows: ["Backend CI/CD"]
+    types:
+      - completed
   pull_request:
     branches:
       - main

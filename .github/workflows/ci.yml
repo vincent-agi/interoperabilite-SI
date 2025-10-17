@@ -1,0 +1,43 @@
+name: Backend CI/CD
+
+on:
+  pull_request:
+    branches: '*'
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  build-dev-materiels:
+    name: Build Applications
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+
+      - name: Install Dependencies
+        run: cd dev-materiels && npm i @nestjs/cli && npm i
+
+      - name: Build Application
+        run: cd dev-materiels && npm run build
+  
+  build-wagon-lits:
+    name: Build Applications
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+
+      - name: Install Dependencies
+        run: cd wagon-lits && npm i @nestjs/cli && npm i
+
+      - name: Build Application
+        run: cd wagon-lits && npm run build
