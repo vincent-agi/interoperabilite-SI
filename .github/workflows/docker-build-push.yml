@@ -10,9 +10,12 @@ on:
       - main
     paths-ignore:
       - '**.md'
+  workflow_dispatch:
 
 env:
-  REGISTRY: ghcr.io
+  GITHUB_REGISTRY: ghcr.io
+  DOCKERHUB_REGISTRY: docker.io
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
   DEV_MATERIELS_IMAGE_NAME: dev-materiels
   WAGON_LITS_IMAGE_NAME: wagon-lits
 
@@ -33,20 +36,44 @@ jobs:
         with:
           string: ${{ github.repository }}
 
+      - name: Extract repository name without owner
+        id: repo
+        run: echo "name=$(echo ${{ github.repository }} | cut -d '/' -f 2 | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract metadata for Docker images
-        id: meta
+      - name: Extract metadata for Docker images (GitHub)
+        id: meta-github
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.DEV_MATERIELS_IMAGE_NAME }}
-            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.WAGON_LITS_IMAGE_NAME }}
+            ${{ env.GITHUB_REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.DEV_MATERIELS_IMAGE_NAME }}
+            ${{ env.GITHUB_REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.WAGON_LITS_IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            
+      - name: Extract metadata for Docker images (Docker Hub)
+        id: meta-dockerhub
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.DEV_MATERIELS_IMAGE_NAME }}
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.WAGON_LITS_IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -54,7 +81,6 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha
 
-      # Build and push dev-materiels image
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -65,13 +91,16 @@ jobs:
           file: ./dev-materiels/dev-materiels.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.DEV_MATERIELS_IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.DEV_MATERIELS_IMAGE_NAME }}:${{ github.sha }}
-          labels: ${{ steps.meta.outputs.labels }}
+            ${{ env.GITHUB_REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.DEV_MATERIELS_IMAGE_NAME }}:latest
+            ${{ env.GITHUB_REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.DEV_MATERIELS_IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.DEV_MATERIELS_IMAGE_NAME }}:latest
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.DEV_MATERIELS_IMAGE_NAME }}:${{ github.sha }}
+          labels: |
+            ${{ steps.meta-github.outputs.labels }}
+            ${{ steps.meta-dockerhub.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Build and push wagon-lits image
       - name: Build and push wagon-lits image
         uses: docker/build-push-action@v5
         with:
@@ -79,21 +108,33 @@ jobs:
           file: ./wagon-lits/wagon-lits.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.WAGON_LITS_IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.WAGON_LITS_IMAGE_NAME }}:${{ github.sha }}
-          labels: ${{ steps.meta.outputs.labels }}
+            ${{ env.GITHUB_REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.WAGON_LITS_IMAGE_NAME }}:latest
+            ${{ env.GITHUB_REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.WAGON_LITS_IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.WAGON_LITS_IMAGE_NAME }}:latest
+            ${{ env.DOCKERHUB_USERNAME }}/${{ env.WAGON_LITS_IMAGE_NAME }}:${{ github.sha }}
+          labels: |
+            ${{ steps.meta-github.outputs.labels }}
+            ${{ steps.meta-dockerhub.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           
       - name: Image digest
-        run: echo "Images have been built and pushed with digest ${{ steps.meta.outputs.digest }}"
+        run: echo "Images have been built and pushed with digests ${{ steps.meta-github.outputs.digest }} and ${{ steps.meta-dockerhub.outputs.digest }}"
         
       - name: Summary
         run: |
-          echo "## 🐳 Docker Build Results" >> $GITHUB_STEP_SUMMARY
-          echo "### Dev-Materiels Image" >> $GITHUB_STEP_SUMMARY
-          echo "- Repository: \`${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.DEV_MATERIELS_IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "## Docker Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "### GitHub Container Registry" >> $GITHUB_STEP_SUMMARY
+          echo "#### Dev-Materiels Image" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository: \`${{ env.GITHUB_REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.DEV_MATERIELS_IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Tags: \`latest\`, \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "### Wagon-Lits Image" >> $GITHUB_STEP_SUMMARY
-          echo "- Repository: \`${{ env.REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.WAGON_LITS_IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "#### Wagon-Lits Image" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository: \`${{ env.GITHUB_REGISTRY }}/${{ steps.string.outputs.lowercase }}-${{ env.WAGON_LITS_IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Tags: \`latest\`, \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "### Docker Hub" >> $GITHUB_STEP_SUMMARY
+          echo "#### Dev-Materiels Image" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository: \`${{ env.DOCKERHUB_USERNAME }}/${{ env.DEV_MATERIELS_IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Tags: \`latest\`, \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "#### Wagon-Lits Image" >> $GITHUB_STEP_SUMMARY
+          echo "- Repository: \`${{ env.DOCKERHUB_USERNAME }}/${{ env.WAGON_LITS_IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- Tags: \`latest\`, \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
