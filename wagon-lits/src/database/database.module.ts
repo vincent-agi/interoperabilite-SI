@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LogEntity } from './entities/log.entity';
 import { LogQueryService } from './log-query.service';
 import { LogsController } from './logs.controller';
 import { DatabaseLoggerService } from './database-logger.service';
 import { CommandEntity } from '../commands/entities/command.entity';
+import { LoggerModule } from '../logger/logger.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { CommandEntity } from '../commands/entities/command.entity';
       logging: ['error', 'query', 'warn'],
     }),
     TypeOrmModule.forFeature([LogEntity, CommandEntity]),
+    forwardRef(() => LoggerModule),
   ],
   controllers: [LogsController],
   providers: [LogQueryService, DatabaseLoggerService],

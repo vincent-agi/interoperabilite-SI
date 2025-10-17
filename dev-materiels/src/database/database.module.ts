@@ -1,13 +1,15 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LogEntity } from './entities/log.entity';
 import { LogQueryService } from './log-query.service';
 import { LogsController } from './logs.controller';
 import { DatabaseLoggerService } from './database-logger.service';
 import { OrderEntity } from '../orders/entities/order.entity';
+import { LoggerModule } from '../logger/logger.module';
 
 @Module({
   imports: [
+    forwardRef(() => LoggerModule),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'db',

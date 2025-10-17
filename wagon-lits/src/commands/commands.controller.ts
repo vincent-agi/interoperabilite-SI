@@ -22,7 +22,6 @@ export class CommandsController {
     await this.logger.log(`Mise à jour reçue: ${JSON.stringify(updateData)}`);
     
     try {
-      // Si c'est une mise à jour d'une commande existante
       if (updateData.orderNumber) {
         const command = await this.commandsService.processUpdate(updateData);
         
