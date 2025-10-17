@@ -15,9 +15,8 @@ networks:
 services:
   # Wagon lits
   wagon-lits:
-    build:
-      context: ./wagon-lits
-      dockerfile: wagon-lits.Dockerfile
+    image: lezards/wagon-lits
+    platform: linux/amd64
     container_name: wagon-lits-connector
     volumes:
       - ./wagon-lits-logs:/app/logs
@@ -51,9 +50,8 @@ services:
 
   # Dev-materiels
   dev-materiels:
-    build:
-      context: ./dev-materiels
-      dockerfile: dev-materiels.Dockerfile
+    image: lezards/dev-materiels
+    platform: linux/amd64
     container_name: dev-materiels-connector
     expose:
       - "3040:3001"
