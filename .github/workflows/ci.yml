@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-node@v4
 
       - name: Install Dependencies
-        run: cd dev-materiels && npm i
+        run: cd dev-materiels && npm i @nestjs/cli && npm i
 
       - name: Build Application
         run: nest build
@@ -37,7 +37,7 @@ jobs:
         uses: actions/setup-node@v4
 
       - name: Install Dependencies
-        run: cd wagon-lits && npm i
+        run: cd wagon-lits && npm i @nestjs/cli && npm i
 
       - name: Build Application
         run: nest build
