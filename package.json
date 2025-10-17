@@ -16,7 +16,7 @@
   "main": "index.js",
   "scripts": {
     "build:dev-materiels": "cd dev-materiels && npm i && npm run build",
-    "build:wagon-lits": "cd ../wagon-lits && npm i && npm run build",
+    "build:wagon-lits": "cd wagon-lits && npm i && npm run build",
     "install": "npm run build:dev-materiels && npm run build:wagon-lits"
   }
 }
