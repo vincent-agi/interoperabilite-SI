@@ -15,7 +15,9 @@ networks:
 services:
   # Wagon lits
   wagon-lits:
-    image: ghcr.io/vincent-agi/interoperabilite-si-wagon-lits
+    build:
+      context: ./wagon-lits
+      dockerfile: wagon-lits.Dockerfile
     container_name: wagon-lits-connector
     volumes:
       - ./wagon-lits-logs:/app/logs
@@ -49,7 +51,9 @@ services:
 
   # Dev-materiels
   dev-materiels:
-    image: ghcr.io/vincent-agi/interoperabilite-si-dev-materiels
+    build:
+      context: ./dev-materiels
+      dockerfile: dev-materiels.Dockerfile
     container_name: dev-materiels-connector
     expose:
       - "3040:3001"
@@ -160,6 +164,7 @@ services:
   # Kafka & Zookeeper
   zookeeper:
     image: confluentinc/cp-zookeeper:7.3.0
+    restart: unless-stopped
     container_name: zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
@@ -176,8 +181,8 @@ services:
         
   kafka:
     image: confluentinc/cp-kafka:7.3.0
-    container_name: kafka
     restart: unless-stopped
+    container_name: kafka
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -202,7 +207,6 @@ services:
       
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
-    restart: unless-stopped
     container_name: kafka-ui
     depends_on:
       kafka:
