@@ -177,6 +177,7 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.3.0
     container_name: kafka
+    restart: unless-stopped
     depends_on:
       zookeeper:
         condition: service_healthy
@@ -201,6 +202,7 @@ services:
       
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
+    restart: unless-stopped
     container_name: kafka-ui
     depends_on:
       kafka:
