@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrderEntity } from './entities/order.entity';
 import { KafkaService } from '../kafka/kafka.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 
 @Injectable()
 export class OrdersService {
@@ -17,6 +18,7 @@ export class OrdersService {
     @InjectRepository(OrderEntity)
     private orderRepository: Repository<OrderEntity>,
     private readonly kafkaService: KafkaService,
+    private readonly webhooksService: WebhooksService,
   ) {
     this.logger.setContext('OrdersService');
   }
@@ -151,6 +153,15 @@ export class OrdersService {
       } catch (error) {
         await this.logger.error(`Erreur lors de l'envoi HTTP de la mise à jour: ${error.message}`, error.stack);
       }
+
+      // Envoi aux abonnés Webhooks
+      try {
+        await this.webhooksService.notifySubscribers(update);
+        await this.logger.log(`Webhook envoyé à tous les abonnés`);
+      } catch (error) {
+        await this.logger.error(`Erreur lors de l'envoi du webhook : ${error.message}`, error.stack);
+      }
+
     } catch (error) {
       await this.logger.error(`Erreur lors de la génération de la mise à jour: ${error.message}`, error.stack);
     }
