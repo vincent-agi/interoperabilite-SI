@@ -7,10 +7,13 @@ import { LoggerModule } from '../logger/logger.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrderEntity } from './entities/order.entity';
 import { KafkaModule } from '../kafka/kafka.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
+
 
 @Module({
   imports: [
     HttpModule,
+    WebhooksModule,
     LoggerModule,
     KafkaModule,
     TypeOrmModule.forFeature([OrderEntity])

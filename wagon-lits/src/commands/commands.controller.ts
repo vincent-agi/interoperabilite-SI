@@ -56,4 +56,30 @@ export class CommandsController {
       };
     }
   }
+  @Post('webhook')
+  async handleWebhook(@Body() updateData: any) {
+  await this.logger.log(`Webhook reçu: ${JSON.stringify(updateData)}`);
+
+  try {
+    const result = await this.commandsService.processUpdate(updateData);
+
+    return {
+      received: true,
+      timestamp: new Date(),
+      message: `Webhook traité pour la commande ${updateData.orderNumber}`,
+      status: result?.status,
+    };
+  } catch (error) {
+    await this.logger.error(
+      `Erreur lors du traitement du webhook: ${error.message}`,
+      error.stack
+    );
+    return {
+      received: false,
+      timestamp: new Date(),
+      error: error.message,
+    };
+  }
+}
+
 }

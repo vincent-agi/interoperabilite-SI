@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { HttpService } from '@nestjs/axios';
 import { CustomLoggerService } from '../logger/custom-logger.service';
@@ -9,8 +9,9 @@ import { Repository } from 'typeorm';
 import { CommandEntity } from './entities/command.entity';
 import { KafkaService } from '../kafka/kafka.service';
 
+
 @Injectable()
-export class CommandsService {
+export class CommandsService implements OnModuleInit {
   constructor(
     private readonly httpService: HttpService,
     private readonly logger: CustomLoggerService,
@@ -20,6 +21,30 @@ export class CommandsService {
   ) {
     this.logger.setContext('CommandsService');
   }
+  async onModuleInit() {
+  this.logger.log('Initialisation du service Wagon-Lits : démarrage abonnement Webhook...');
+
+  const subscriptionPayload = {
+    client: 'wagon-lits',
+    callbackUrl: 'http://api-gateway/wagon-list/commands/webhook',
+  };
+
+  try {
+    const response = await firstValueFrom(
+      this.httpService.post('http://api-gateway/dev-materiels/webhooks/subscribe', subscriptionPayload)
+    );
+
+    this.logger.log(
+      `Abonnement Webhook réussi : ${JSON.stringify(response.data)}`
+    );
+  } catch (error) {
+    this.logger.error(
+      `Échec de l’abonnement Webhook : ${error.message}`,
+      error.stack,
+    );
+  }
+}
+
 
   generateOrderNumber(): string {
     return `WL-${Math.floor(Math.random() * 10000)}-${new Date().getTime().toString().slice(-4)}`;
