@@ -14,6 +14,6 @@ RUN npm run build
 
 RUN cp -r src/database/migrations dist/database/
 
-EXPOSE 3000
+EXPOSE 3001
 
 CMD ["node", "dist/src/main.js"]

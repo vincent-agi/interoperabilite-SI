@@ -21,7 +21,7 @@ services:
     volumes:
       - ./wagon-lits-logs:/app/logs
       - ./wagon-lits/src:/app/src
-    expose:
+    ports:
       - "3030:3002"
     depends_on:
       db:
@@ -53,7 +53,7 @@ services:
     image: lezards/dev-materiels
     platform: linux/amd64
     container_name: dev-materiels-connector
-    expose:
+    ports:
       - "3040:3001"
     volumes:
       - ./dev-materiels-logs:/app/logs
