@@ -141,7 +141,7 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: db-administration
+    container_name: db-administration-si
     restart: unless-stopped
     environment:
       - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}

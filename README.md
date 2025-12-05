@@ -23,7 +23,7 @@ cd interoperabilite-SI
 2. Lancer le projet
 
 ```bash
-docker-compose up -d
+./run.sh
 ```
 
 ## Fonctionnement du projet
