@@ -1,7 +1,5 @@
 #!/bin/bash
 
-git clone https://github.com/vincent-agi/interoperabilite-SI.git
-cd interoperabilite-SI
 docker-compose up -d --build
 
 cd ..
