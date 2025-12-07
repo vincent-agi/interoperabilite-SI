@@ -36,12 +36,17 @@ Bienvenue dans la documentation du projet d'interopérabilité. Ce projet pédag
    - Cycle de vie d'une commande
    - Gestion des erreurs
 
-7. [Logging et Monitoring](logging-monitoring.md)
+7. [Système de Notification par Webhook](webhook-notification.md)
+   - Gestion automatique des nouveaux acteurs
+   - Intérêt métier et avantages
+   - Impact sur la chaîne de valeur
+
+8. [Logging et Monitoring](logging-monitoring.md)
    - Système de journalisation
    - Surveillance des services
    - Accès aux logs
 
-8. [Guide de Dépannage](depannage.md)
+9. [Guide de Dépannage](depannage.md)
    - Problèmes courants et solutions
    - Vérification de l'état du système
    - Ressources d'aide supplémentaire
