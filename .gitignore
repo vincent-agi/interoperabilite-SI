@@ -2,3 +2,5 @@
 **/*/dist
 dev-materiels-logs
 wagon-lits-logs
+# macOS
+.DS_Store
